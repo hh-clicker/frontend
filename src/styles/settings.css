@@ -1,0 +1,69 @@
+.settings-page-actions { display: flex; flex-wrap: wrap; gap: var(--space-2); }
+.settings-layout { display: grid; grid-template-columns: minmax(0, 1.6fr) minmax(300px, 1fr); align-items: start; gap: var(--space-5); }
+.settings-sections { display: grid; min-width: 0; gap: var(--space-5); }
+.settings-card { min-width: 0; border: 1px solid var(--color-border); border-radius: var(--radius-md); background: var(--color-surface); box-shadow: var(--shadow-card); }
+.settings-card > header { display: flex; align-items: center; gap: 14px; border-bottom: 1px solid var(--color-border-subtle); padding: 20px 24px; }
+.settings-card__icon { display: grid; width: 42px; height: 42px; flex-shrink: 0; border-radius: 12px; place-items: center; }
+.settings-card__icon--orange { background: var(--color-orange-soft); color: var(--color-orange); }
+.settings-card__icon--blue { background: var(--color-blue-soft); color: var(--color-blue); }
+.settings-card__icon--green { background: var(--color-green-soft); color: var(--color-green); }
+.settings-card h2 { font-size: var(--font-size-card-title); }
+.settings-card header p { margin-top: 4px; color: var(--color-muted); font-size: 13px; line-height: 1.5; }
+.settings-card__body { padding: 4px 24px; }
+.notification-setting { display: flex; align-items: center; gap: 14px; padding: 20px 0; }
+.notification-setting + .notification-setting { border-top: 1px solid var(--color-border-subtle); }
+.notification-setting label { display: grid; min-width: 0; flex: 1; gap: 5px; cursor: pointer; }
+.notification-setting strong { font-size: 15px; color: var(--color-text-secondary); }
+.notification-setting small { font-size: 13px; color: var(--color-muted); line-height: 1.5; }
+.notification-switch { position: relative; appearance: none; width: 40px; height: 24px; flex: 0 0 40px; margin: 0; border: 1px solid var(--color-border); border-radius: 20px; background: var(--color-muted); cursor: pointer; transition: background 150ms; }
+.notification-switch::before { content: ''; position: absolute; top: 3px; left: 3px; width: 16px; height: 16px; border-radius: 50%; background: white; transition: transform 150ms; }
+.notification-switch:checked { border-color: var(--color-orange); background: var(--color-orange); }
+.notification-switch:checked::before { transform: translateX(16px); }
+.notification-switch:focus-visible { outline: 2px solid var(--color-blue); outline-offset: 3px; }
+.notification-switch:disabled { opacity: .5; cursor: default; }
+.notification-event-icon { display: grid; width: 36px; height: 36px; flex-shrink: 0; place-items: center; border-radius: 10px; }
+.notification-permission { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 12px; padding: 14px 16px; border-radius: 10px; background: var(--color-surface-muted); }
+.notification-permission > div { flex: 1 1 200px; }
+.notification-permission p { margin-top: 8px; color: var(--color-muted); font-size: 12px; line-height: 1.5; }
+.notification-footnote { padding: 16px 24px; border-top: 1px solid var(--color-border-subtle); border-radius: 0 0 var(--radius-md) var(--radius-md); background: var(--color-surface-muted); color: var(--color-muted); font-size: 12px; line-height: 1.5; }
+.notification-preview { position: sticky; top: calc(var(--topbar-height) + 20px); }
+.notification-preview__body { display: grid; gap: 18px; padding: 24px; }
+.notification-preview__surface { padding: 18px; border-radius: 12px; background: var(--color-surface-muted); }
+.notification-example { padding: 18px; border: 1px solid var(--color-border); border-radius: 12px; background: var(--color-surface); box-shadow: var(--shadow-card); }
+.notification-brand { display: flex; align-items: center; gap: 8px; color: var(--color-orange); font-size: 12px; }
+.notification-brand > span { margin-left: auto; color: var(--color-muted); font-size: 11px; }
+.notification-example h3, .notification-demo-toast h3 { margin-top: 14px; font-size: 15px; }
+.notification-example p, .notification-demo-toast p { margin-top: 6px; color: var(--color-text-secondary); font-size: 13px; line-height: 1.6; }
+.notification-delivery { display: flex; align-items: center; gap: 10px; color: var(--color-muted); font-size: 13px; }
+.notification-delivery small { display: block; margin-top: 4px; font-size: 12px; }
+.notification-test-hint { color: var(--color-muted); font-size: 12px; line-height: 1.5; }
+.notification-demo-toast { position: fixed; right: 24px; bottom: 24px; z-index: 100; width: min(380px, calc(100vw - 32px)); padding: 20px; border: 1px solid var(--color-border); border-radius: 14px; background: var(--color-surface); box-shadow: 0 12px 40px rgb(30 40 60 / 20%); }
+.notification-brand button { display: grid; margin-left: auto; padding: 4px; border: 0; background: transparent; color: var(--color-muted); cursor: pointer; place-items: center; }
+.notification-demo-toast > small { display: block; margin-top: 12px; color: var(--color-muted); font-size: 11px; line-height: 1.5; }
+.telegram-settings { margin-top: var(--space-5); }
+.telegram-settings__body { display: grid; gap: 18px; padding: 24px; }
+.telegram-settings__intro { display: grid; max-width: 720px; gap: 18px; }
+.telegram-settings__intro > div > strong, .telegram-settings__status strong { color: var(--color-text-secondary); font-size: 15px; }
+.telegram-settings__intro p, .telegram-settings__status p { margin-top: 7px; color: var(--color-muted); font-size: 13px; line-height: 1.55; }
+.telegram-settings__status { display: grid; gap: 0; }
+.telegram-settings__status-line { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; }
+.telegram-settings__actions { display: flex; flex-wrap: wrap; gap: var(--space-2); }
+.telegram-settings__intro > .app-button { justify-self: start; }
+.telegram-settings__token { max-width: 720px; }
+.telegram-settings__loading { color: var(--color-muted); font-size: 13px; }
+@media (max-width: 1200px) {
+  .settings-layout { grid-template-columns: minmax(0, 1fr); }
+  .notification-preview { position: static; }
+}
+@media (max-width: 600px) {
+  .settings-page .page-header { flex-wrap: wrap; }
+  .settings-card > header, .notification-preview__body { padding: 16px; }
+  .settings-card__body { padding: 0 16px; }
+  .notification-footnote { padding: 16px; }
+  .notification-event-icon { display: none; }
+  .notification-demo-toast { right: 16px; bottom: 16px; }
+  .telegram-settings__body { padding: 16px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .notification-switch, .notification-switch::before { transition: none; }
+}

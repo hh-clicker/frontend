@@ -1,0 +1,212 @@
+.app-shell {
+  min-height: 100vh;
+}
+
+.sidebar {
+  position: fixed;
+  inset: 0 auto 0 0;
+  z-index: 20;
+  display: flex;
+  width: var(--sidebar-width);
+  flex-direction: column;
+  border-right: 1px solid var(--color-border);
+  background: var(--color-surface);
+}
+
+.brand {
+  display: flex;
+  height: var(--topbar-height);
+  align-items: center;
+  gap: 8px;
+  border-bottom: 1px solid var(--color-border-subtle);
+  padding: 0 22px;
+  color: var(--color-text);
+  font-size: 20px;
+  font-weight: var(--font-weight-bold);
+  letter-spacing: -0.4px;
+}
+
+.brand__icon {
+  width: 32px;
+  height: 32px;
+  flex: 0 0 auto;
+}
+
+.sidebar__nav {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 14px 12px;
+}
+
+.nav-link {
+  display: flex;
+  min-height: 40px;
+  align-items: center;
+  gap: 11px;
+  border-radius: var(--radius-sm);
+  padding: 0 12px;
+  color: var(--color-text-secondary);
+  font-size: 13px;
+  transition: background-color 150ms ease, color 150ms ease;
+}
+
+.nav-link:hover {
+  background: var(--color-surface-muted);
+  color: var(--color-text);
+}
+
+.nav-link--active {
+  background: var(--color-primary-soft);
+  color: var(--color-primary);
+  font-weight: var(--font-weight-semibold);
+}
+
+.nav-link__count {
+  display: inline-grid;
+  min-width: 19px;
+  height: 19px;
+  flex: 0 0 auto;
+  margin-left: 0;
+  border-radius: var(--radius-pill);
+  background: var(--color-primary);
+  padding-inline: 6px;
+  color: #fff;
+  font-size: 10px;
+  place-items: center;
+}
+
+.nav-link > span:not(.nav-link__count) {
+  min-width: 0;
+  flex: 1 1 auto;
+}
+
+.app-workspace {
+  min-height: 100vh;
+  margin-left: var(--sidebar-width);
+}
+
+.topbar {
+  position: sticky;
+  top: 0;
+  z-index: 15;
+  display: flex;
+  min-height: var(--topbar-height);
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+  border-bottom: 1px solid var(--color-border);
+  background: rgba(255, 255, 255, 0.96);
+  padding: 8px 22px;
+}
+
+.topbar__selectors,
+.topbar__status-group {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.topbar-field {
+  display: grid;
+  width: 142px;
+  gap: 3px;
+}
+
+.topbar-field--resume { width: 180px; }
+
+.topbar-field > span,
+.topbar-status > span:first-child {
+  display: inline-flex;
+  align-items: center;
+  color: var(--color-muted);
+  font-size: 10px;
+  line-height: 1;
+}
+
+.topbar-field .app-select,
+.topbar-field .multiselect__tags {
+  height: 32px;
+  min-height: 32px;
+}
+
+.topbar-field .multiselect__tags {
+  padding: 0 32px 0 10px;
+}
+
+.topbar-field .multiselect__placeholder {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.topbar-field .multiselect__select { height: 32px; }
+
+.topbar-status {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding-left: var(--space-3);
+  border-left: 1px solid var(--color-border-subtle);
+}
+
+.topbar-status__signal { color: var(--color-green); }
+.topbar-status__signal.is-offline { color: var(--color-neutral); }
+.topbar-status__lock { color: var(--color-muted); }
+
+.app-main {
+  width: min(100%, 1510px);
+  margin: 0 auto;
+  padding: 22px 26px 42px;
+}
+
+.page-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-6);
+  margin-bottom: var(--space-6);
+}
+
+.page-header h1 {
+  font-size: var(--font-size-page-title);
+  line-height: var(--line-height-tight);
+  letter-spacing: -0.8px;
+}
+
+.page-header p {
+  margin-top: 5px;
+  color: var(--color-muted);
+}
+
+.placeholder-page .content-card {
+  min-height: 420px;
+}
+
+.page-error {
+  display: grid;
+  min-height: 560px;
+  align-content: center;
+  justify-items: center;
+  color: var(--color-red);
+  text-align: center;
+}
+
+.page-error h1 {
+  margin-top: var(--space-3);
+  color: var(--color-text);
+  font-size: var(--font-size-section-title);
+}
+
+.page-error p {
+  margin: var(--space-2) 0 var(--space-5);
+  color: var(--color-muted);
+}
+
+@media (max-width: 1320px) {
+  .topbar-status:nth-of-type(3),
+  .topbar-status__lock {
+    display: none;
+  }
+}
