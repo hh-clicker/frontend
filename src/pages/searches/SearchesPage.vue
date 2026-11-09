@@ -1,8 +1,9 @@
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
-import { useRoute, useRouter } from 'vue-router'
-import { IconAlertTriangle, IconArchive, IconBriefcase, IconCheck, IconExternalLink, IconPencil, IconPlus, IconRefresh, IconSearch } from '@tabler/icons-vue'
+import { RouterLink, useRoute, useRouter } from 'vue-router'
+import { IconArchive, IconBriefcase, IconCheck, IconExternalLink, IconPencil, IconPlus, IconRefresh, IconSearch } from '@tabler/icons-vue'
 import { isMockMode } from '../../app/runtime'
+import RuntimeSelectorNotices from '../../components/browser/RuntimeSelectorNotices.vue'
 import AppAlert from '../../components/ui/AppAlert.vue'
 import HhExternalLink from '../../components/browser/HhExternalLink.vue'
 import AppButton from '../../components/ui/AppButton.vue'
@@ -19,6 +20,8 @@ import { formatDateTime } from '../../utils/dateTime'
 const route = useRoute()
 const router = useRouter()
 const selectedSearchId = ref<string | null>(null)
+const diagnosticResolvedSearchId = ref<string | null>(null)
+watch(selectedSearchId, () => { diagnosticResolvedSearchId.value = null })
 const busyIds = ref<string[]>([])
 const createdNoticeVisible = ref(route.query.created === '1')
 const actionError = ref<string | null>(null)
@@ -96,6 +99,7 @@ function elapsedLabel(search: SearchDefinition): string {
 async function runScan(search: SearchDefinition): Promise<void> {
   if (busyIds.value.includes(search.id) || search.status === 'SCANNING') return
   actionError.value = null
+  diagnosticResolvedSearchId.value = null
   selectedSearchId.value = search.id
   busyIds.value = [...busyIds.value, search.id]
   mockProgress.value[search.id] = 1
@@ -180,12 +184,14 @@ function replaceSearch(updated: SearchDefinition): void { searches.value = (sear
           <div class="search-scan-progress__track"><span :class="{ 'search-scan-progress__value--indeterminate': !hasDetailedProgress(selectedSearch) }" :style="hasDetailedProgress(selectedSearch) ? { width: `${scanProgress(selectedSearch)}%` } : undefined" /></div>
           <small>Прошло {{ elapsedLabel(selectedSearch) }} Можно уйти со страницы — сканирование продолжится.</small>
         </section>
-        <AppAlert v-else-if="selectedSearch.status === 'ERROR'" tone="warning" class="search-scan-error">
-          <div class="search-scan-error__content"><IconAlertTriangle :size="20" /><div><strong>Не удалось завершить сканирование</strong><span>{{ selectedSearch.lastError }}</span><small>Предыдущие результаты не изменены.</small></div></div>
+        <AppAlert v-else-if="selectedSearch.status === 'ERROR' && diagnosticResolvedSearchId !== selectedSearch.id" tone="warning" class="search-scan-error">
+          <div class="search-scan-error__content"><strong>Не удалось завершить сканирование</strong><span>{{ selectedSearch.lastError }}</span><small>Предыдущие результаты не изменены.</small></div>
         </AppAlert>
+        <section v-else-if="selectedSearch.status === 'ERROR'" class="search-last-result"><IconCheck :size="20" /><div><strong>Проверка страницы пройдена</strong><span>Можно повторить сканирование.</span></div></section>
         <section v-else-if="selectedSearch.lastScannedAt" class="search-last-result"><IconCheck :size="20" /><div><strong>Последнее сканирование завершено</strong><span>{{ formatDateTime(selectedSearch.lastScannedAt) }}</span></div></section>
         <section v-else class="search-last-result search-last-result--empty"><IconSearch :size="20" /><div><strong>Поиск ещё не сканировался</strong><span>Запустите сбор, чтобы получить первые вакансии.</span></div></section>
 
+        <RuntimeSelectorNotices v-if="!isSelectedBusy && applicationContextStore.state.overview?.selectedAccountId" :key="selectedSearch.id" class="search-selector-notices" :account-id="applicationContextStore.state.overview.selectedAccountId" :search-id="selectedSearch.id" @resolved="diagnosticResolvedSearchId = $event ? selectedSearch.id : null" />
         <section class="search-kpis" aria-label="Результаты поиска">
           <div><span>За последний скан</span><strong>{{ selectedSearch.lastScannedAt ? selectedSearch.newVacancies : '—' }}</strong></div>
           <div><span>Всего вакансий</span><strong>{{ selectedSearch.totalVacancies }}</strong></div>

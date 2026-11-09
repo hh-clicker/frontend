@@ -3,6 +3,7 @@ import { apiRequest } from '../api/client'
 import type { ApplicationRun, ApplicationRunSummary, ApplicationRunStatus, StartApplicationRunRequest } from '../api/contracts/applications'
 import { createApplicationRunMock, getApplicationRunsMock } from '../mocks/applications'
 import { getMockSelection, touchMockState } from '../mocks/state'
+import { ensureBrowserForResume } from './browser'
 
 export async function loadApplicationRuns(resumeId?: string | null): Promise<ApplicationRunSummary[]> {
   if (isMockMode) {
@@ -35,11 +36,16 @@ export async function loadApplicationRun(runId: string): Promise<ApplicationRun>
 }
 
 export async function startApplicationRun(request: StartApplicationRunRequest): Promise<ApplicationRun> {
+  await ensureBrowserForResume(request.resumeId)
   if (isMockMode) return createApplicationRunMock(getMockScenario(), request)
   return apiRequest<ApplicationRun>('/api/v1/application-runs', { method: 'POST', body: JSON.stringify(request) })
 }
 
 export async function setApplicationRunStatus(runId: string, status: ApplicationRunStatus, confirmFallback = false): Promise<ApplicationRun> {
+  if (status === 'RUNNING') {
+    const run = await loadApplicationRun(runId)
+    await ensureBrowserForResume(run.resumeId)
+  }
   if (isMockMode) {
     const run = getApplicationRunsMock(getMockScenario()).find((item) => item.id === runId)
     if (!run) throw new Error('Запуск не найден')

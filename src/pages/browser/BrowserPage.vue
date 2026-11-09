@@ -1,9 +1,11 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
-import { RouterLink } from 'vue-router'
+import { RouterLink, useRoute } from 'vue-router'
 import { IconAlertTriangle, IconBrandChrome, IconInfoCircle, IconPlayerPlay, IconPlayerStop, IconRefresh, IconServer, IconShieldCheck } from '@tabler/icons-vue'
 import type { BrowserProfile } from '../../api/contracts/browser'
 import AccountSetupPanel from '../../components/browser/AccountSetupPanel.vue'
+import SelectorDiagnosticsPanel from '../../components/browser/SelectorDiagnosticsPanel.vue'
+import { parseDiagnosticEntry } from '../../services/selectorDiagnosticEntry'
 import AppAlert from '../../components/ui/AppAlert.vue'
 import AppButton from '../../components/ui/AppButton.vue'
 import EmptyState from '../../components/ui/EmptyState.vue'
@@ -15,6 +17,8 @@ import { applicationContextStore } from '../../services/applicationContext'
 import { authorizationChecks, checkAuthorizationViaAgent, ensureBrowserProfile, loadBrowserPage, startBrowser, stopBrowser } from '../../services/browser'
 
 const selectedAccountId = computed(() => applicationContextStore.state.overview?.selectedAccountId ?? null)
+const route = useRoute()
+const diagnosticEntry = computed(() => parseDiagnosticEntry(route.query))
 const selectedAccount = computed(() => applicationContextStore.state.overview?.accounts.find((item) => item.id === selectedAccountId.value) ?? null)
 const { data, loading, error, refresh } = usePageData(async () => selectedAccountId.value ? loadBrowserPage(selectedAccountId.value) : null)
 const busy = ref(false)
@@ -171,6 +175,10 @@ async function stop(): Promise<void> {
       </div>
     </section>
 
+    <SelectorDiagnosticsPanel v-if="selectedAccountId" :account-id="selectedAccountId" :entry="diagnosticEntry"
+      :resume-id="applicationContextStore.state.overview?.selectedResumeId ?? null"
+      :available="browserAgentStatus === 'READY' && !busy && !checking && !setupBusy"
+      :full-available="browserAgentStatus === 'READY' && !busy && !checking && !setupBusy" />
     <AccountSetupPanel
       v-if="selectedAccount"
       :key="selectedAccount.id"

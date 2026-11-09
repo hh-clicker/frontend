@@ -7,6 +7,7 @@ import { getSearchesMock } from '../mocks/searches'
 import { createVacancyEnrichmentMock, getVacanciesMock } from '../mocks/vacancies'
 import { getResumesMock } from '../mocks/resumes'
 import { getMockSelection, touchMockState } from '../mocks/state'
+import { ensureBrowserForResume } from './browser'
 
 export async function loadSearches(resumeId?: string | null): Promise<SearchDefinition[]> {
   if (isMockMode) {
@@ -89,6 +90,8 @@ export async function setSearchPaused(searchId: string, paused: boolean): Promis
 }
 
 export async function scanSearch(searchId: string): Promise<SearchDefinition> {
+  const target = await loadSearch(searchId)
+  await ensureBrowserForResume(target.resumeId)
   if (isMockMode) {
     const search = findMockSearch(searchId)
     search.status = 'SCANNING'

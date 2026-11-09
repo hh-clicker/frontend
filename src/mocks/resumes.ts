@@ -57,6 +57,16 @@ export function updateResumeSettingsMock(scenario: MockScenario, resumeId: strin
   return resume
 }
 
+export function updateResumeTextMock(scenario: MockScenario, resumeId: string, plainText: string): ResumeProfile {
+  const resume = getResumesMock(scenario).items.find(item => item.id === resumeId)
+  if (!resume) throw new Error('Резюме не найдено')
+  if (!plainText.trim()) throw new Error('Не загружен текст резюме')
+  resume.plainText = plainText.trim()
+  resume.textLoadedAt = new Date().toISOString()
+  touchMockState()
+  return resume
+}
+
 export function importResumeMock(scenario: MockScenario, accountId: string, request: ImportResumeItem): ResumeProfile {
   const items = getResumesMock(scenario).items
   if (items.some((item) => item.hhResumeId === request.hhResumeId)) throw new Error('Это резюме HH уже добавлено')

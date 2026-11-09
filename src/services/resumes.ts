@@ -1,9 +1,22 @@
 import { apiRequest } from '../api/client'
 import type { ImportResumeItem, ResumeAutomationSettings, ResumeProfile, ResumesResponse } from '../api/contracts/resumes'
 import { getMockScenario, isMockMode } from '../app/runtime'
-import { importResumeMock, getResumesMock, updateResumeSettingsMock } from '../mocks/resumes'
+import { importResumeMock, getResumesMock, updateResumeSettingsMock, updateResumeTextMock } from '../mocks/resumes'
 import { getMockSelection } from '../mocks/state'
-import { readResumeTextViaAgent } from './browser'
+import { ensureBrowserForAccount, readResumeTextViaAgent } from './browser'
+import { refreshResumeTextFromHh } from './resumeTextRefresh'
+
+export async function refreshResumeText(resume: Pick<ResumeProfile, 'id' | 'accountId' | 'hhResumeId'>): Promise<ResumeProfile> {
+  return refreshResumeTextFromHh(resume, {
+    prepare: ensureBrowserForAccount, read: readResumeTextViaAgent,
+    save: async (id, plainText) => {
+      if (isMockMode) return structuredClone(updateResumeTextMock(getMockScenario(), id, plainText))
+      return apiRequest<ResumeProfile>(`/api/v1/resumes/${encodeURIComponent(id)}/text`, {
+        method: 'PUT', body: JSON.stringify({ plainText }),
+      })
+    },
+  })
+}
 
 export async function importResumes(accountId: string, selected: Pick<ImportResumeItem, 'hhResumeId' | 'name'>[], onProgress?: (index: number, total: number) => void): Promise<ResumesResponse> {
   const items: ImportResumeItem[] = []

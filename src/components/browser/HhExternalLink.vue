@@ -2,7 +2,7 @@
 import { ref } from 'vue'
 import { openHhUrl } from '../../services/hhBrowserNavigation'
 
-const props = defineProps<{ href: string }>()
+const props = defineProps<{ href: string; focusExisting?: boolean }>()
 const opening = ref(false)
 
 async function open(event: MouseEvent): Promise<void> {
@@ -10,7 +10,7 @@ async function open(event: MouseEvent): Promise<void> {
   if (opening.value) return
   opening.value = true
   try {
-    await openHhUrl(props.href)
+    await openHhUrl(props.href, props.focusExisting)
   } finally {
     opening.value = false
   }

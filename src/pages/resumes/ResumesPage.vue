@@ -8,19 +8,26 @@ import AccountEditorDialog from '../../components/resumes/AccountEditorDialog.vu
 import AiLetterEditor from '../../components/resumes/AiLetterEditor.vue'
 import { defaultAiLetter, aiLetterError, type AiLetterSettings } from '../../services/aiLetters'
 import HhExternalLink from '../../components/browser/HhExternalLink.vue'
+import RuntimeSelectorNotices from '../../components/browser/RuntimeSelectorNotices.vue'
 import AppAlert from '../../components/ui/AppAlert.vue'
 import AppButton from '../../components/ui/AppButton.vue'
 import EmptyState from '../../components/ui/EmptyState.vue'
 import PageSkeleton from '../../components/ui/PageSkeleton.vue'
 import { usePageData } from '../../composables/usePageData'
 import { applicationContextStore } from '../../services/applicationContext'
-import { loadResumes, saveResumeSettings } from '../../services/resumes'
+import { loadResumes, saveResumeSettings, refreshResumeText } from '../../services/resumes'
+import { browserAgentStatus } from '../../composables/useBrowserAgentStatus'
+import { formatDateTime } from '../../utils/dateTime'
 
 const context = applicationContextStore.state
 const router = useRouter()
 const { data, loading, error, refresh } = usePageData(() => loadResumes(applicationContextStore.state.overview?.selectedAccountId))
 const selectedId = ref<string | null>(applicationContextStore.state.overview?.selectedResumeId ?? null)
 const saving = ref(false)
+const updatingTextId = ref<string | null>(null)
+const textUpdatedId = ref<string | null>(null)
+const textRetryId = ref<string | null>(null)
+const textUpdateError = ref<{ resumeId: string; message: string } | null>(null)
 const actionError = ref<string | null>(null)
 const saved = ref(false)
 const accountDialogVisible = ref(false)
@@ -60,6 +67,7 @@ watch(() => selectedResume.value?.id, () => {
   if (resume) Object.assign(form, structuredClone({ ...resume.settings, aiLetter: resume.settings.aiLetter ?? defaultAiLetter() }))
   saved.value = false
   actionError.value = null
+  textUpdatedId.value = null; textRetryId.value = null; textUpdateError.value = null
 }, { immediate: true })
 
 function selectResume(resume: ResumeProfile): void {
@@ -92,6 +100,31 @@ async function save(): Promise<void> {
 
 function resetForm(): void {
   if (selectedResume.value) Object.assign(form, structuredClone({ ...selectedResume.value.settings, aiLetter: selectedResume.value.settings.aiLetter ?? defaultAiLetter() }))
+}
+
+async function updateText(): Promise<void> {
+  const resume = selectedResume.value
+  if (!resume || updatingTextId.value || saving.value || browserAgentStatus.value !== 'READY') return
+  updatingTextId.value = resume.id
+  textUpdatedId.value = null; textRetryId.value = null; textUpdateError.value = null
+  try {
+    const updated = await refreshResumeText(resume)
+    if (context.overview?.selectedAccountId === resume.accountId) replaceResume(updated)
+    if (selectedResume.value?.id === resume.id) textUpdatedId.value = resume.id
+  } catch (cause) {
+    if (selectedResume.value?.id === resume.id && context.overview?.selectedAccountId === resume.accountId)
+      textUpdateError.value = { resumeId: resume.id, message: cause instanceof Error ? cause.message : 'Не удалось обновить текст резюме.' }
+  } finally {
+    if (updatingTextId.value === resume.id) updatingTextId.value = null
+  }
+}
+
+function textProblemResolved(value: boolean): void {
+  const resume = selectedResume.value
+  if (value && resume && textUpdateError.value?.resumeId === resume.id) {
+    textRetryId.value = resume.id
+    textUpdateError.value = null
+  }
 }
 
 async function handleAccountCreated(account: HhAccount): Promise<void> {
@@ -136,12 +169,22 @@ function openImport(): void {
         <section class="resume-profile-card">
           <header>
             <div class="resume-profile-card__title"><span><IconFileCv :size="24" /></span><div><h2>{{ selectedResume.name }}</h2></div></div>
-            <div class="resume-profile-card__actions"><HhExternalLink class="app-button app-button--secondary app-button--medium" :href="selectedResume.publicUrl">Открыть на HH <IconExternalLink :size="17" /></HhExternalLink></div>
+            <div class="resume-profile-card__actions"><AppButton :loading="updatingTextId === selectedResume.id" :disabled="saving || !!updatingTextId || browserAgentStatus !== 'READY'" @click="updateText"><IconRefresh v-if="updatingTextId !== selectedResume.id" :size="17" />Обновить текст с HH</AppButton><HhExternalLink class="app-button app-button--secondary app-button--medium" :href="selectedResume.publicUrl">Открыть на HH <IconExternalLink :size="17" /></HhExternalLink></div>
           </header>
           <dl><div><dt>HH Resume ID</dt><dd>{{ selectedResume.hhResumeId }}</dd></div><div><dt>HH-аккаунт</dt><dd>{{ selectedResume.accountName }}</dd></div></dl>
+          <div class="resume-text-status">
+            <p v-if="updatingTextId === selectedResume.id" role="status">Загружаем актуальный текст резюме с HH…</p>
+            <AppAlert v-if="textUpdatedId === selectedResume.id" tone="info">Текст резюме обновлён.</AppAlert>
+            <AppAlert v-if="textUpdateError?.resumeId === selectedResume.id" tone="warning">{{ textUpdateError?.message }} Сохранённый текст резюме не изменён.</AppAlert>
+            <AppAlert v-if="textRetryId === selectedResume.id" tone="info">Проверка страницы пройдена. Можно повторить обновление текста.</AppAlert>
+            <p v-if="browserAgentStatus !== 'READY' && updatingTextId !== selectedResume.id" class="form-help">Для обновления текста дождитесь готовности Browser Agent.</p>
+            <p v-else-if="selectedResume.textLoadedAt" class="form-help">Текст загружен: {{ formatDateTime(selectedResume.textLoadedAt) }}.</p>
+            <p v-else-if="!selectedResume.plainText" class="form-help">Текст ещё не загружен. Нажмите «Обновить текст с HH».</p>
+            <RuntimeSelectorNotices v-if="textUpdateError?.resumeId === selectedResume.id" :key="selectedResume.id" :account-id="selectedResume.accountId" :resume-hash="selectedResume.hhResumeId" @resolved="textProblemResolved" />
+          </div>
           <details v-if="selectedResume.plainText" class="resume-plain-text" :key="selectedResume.id">
             <summary>Текст резюме с HH</summary>
-            <p>Сохранён при добавлении резюме. Изображения и контактные блоки не загружались.</p>
+            <p>Сохранённый текст с HH. Для актуализации используйте «Обновить текст с HH». Изображения и контактные блоки не загружались.</p>
             <pre>{{ selectedResume.plainText }}</pre>
           </details>
         </section>
@@ -166,7 +209,7 @@ function openImport(): void {
             <p class="resume-questionnaire-setting">Вакансии с анкетами передаются на ручное заполнение и не останавливают очередь.</p>
             <p v-if="validationError" class="form-error">{{ validationError }}</p>
           </div>
-          <footer><AppButton :disabled="!hasChanges" @click="resetForm">Отменить изменения</AppButton><AppButton variant="primary" :disabled="!hasChanges || !!validationError" :loading="saving" @click="save">Сохранить настройки</AppButton></footer>
+          <footer><AppButton :disabled="!hasChanges" @click="resetForm">Отменить изменения</AppButton><AppButton variant="primary" :disabled="!hasChanges || !!validationError || !!updatingTextId" :loading="saving" @click="save">Сохранить настройки</AppButton></footer>
         </section>
       </div>
     </section>

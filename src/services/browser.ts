@@ -8,13 +8,47 @@ import type {
   BrowserPageResponse,
   BrowserProfile,
   BrowserAuthorizationResult,
+  DiagnosticMode,
+  SelectorDiagnosticReport,
 } from '../api/contracts/browser'
 import { getMockScenario, isMockMode } from '../app/runtime'
 import { createBrowserProfileMock, getBrowserPageMock, setBrowserRunningMock } from '../mocks/browser'
+import { getResumesMock } from '../mocks/resumes'
+import { createSelectorDiagnosticsMock } from '../mocks/selectorDiagnostics'
+import type { ResumeProfile } from '../api/contracts/resumes'
+import { BrowserPreparation } from './browserPreparation'
 
 const COMMAND_POLLING_INTERVAL_MS = 500
 const COMMAND_TIMEOUT_MS = 35_000
 const AUTHORIZATION_COMMAND_TIMEOUT_MS = 75_000
+// Backend allows 12 minutes for diagnostics/repair; leave a minute to receive its final result.
+const SELECTOR_DIAGNOSTIC_COMMAND_TIMEOUT_MS = 13 * 60_000
+const diagnoseSelectorsMock = createSelectorDiagnosticsMock()
+
+export async function diagnoseSelectorsViaAgent(accountId: string, mode: DiagnosticMode, resumeId?: string | null, tabId?: string | null, repairGroup?: string | null): Promise<SelectorDiagnosticReport> {
+  if (mode === 'FULL' || !tabId && !repairGroup) await ensureBrowserForAccount(accountId)
+  if (isMockMode) {
+    const page = getBrowserPageMock(getMockScenario())
+    if (page.profile?.accountId !== accountId || page.profile.processStatus !== 'RUNNING' || page.agent.status !== 'READY')
+      throw new Error('Откройте браузер выбранного аккаунта и дождитесь готовности агента.')
+    await new Promise(resolve => setTimeout(resolve, repairGroup ? 1800 : 650))
+    return diagnoseSelectorsMock(accountId, resumeId, getMockScenario(), mode, tabId, repairGroup)
+  }
+  const receipt = await apiRequest<BrowserCommandReceiptResponse>('/api/v1/browser/selector-diagnostics', {
+    method: 'POST', body: JSON.stringify({ accountId, mode, resumeId, tabId, repairGroup }),
+  })
+  const result = await waitForBrowserCommand(receipt.commandId, mode === 'FULL' || repairGroup ? SELECTOR_DIAGNOSTIC_COMMAND_TIMEOUT_MS : 105_000)
+  if (!result.selectorDiagnostics) throw new Error('Агент не вернул диагностику. Обновите Browser Agent.')
+  return result.selectorDiagnostics
+}
+
+export async function focusDiagnosticViaAgent(accountId: string, tabId: string): Promise<void> {
+  if (isMockMode) return
+  const receipt = await apiRequest<BrowserCommandReceiptResponse>('/api/v1/browser/focus-diagnostic', {
+    method: 'POST', body: JSON.stringify({ accountId, tabId }),
+  })
+  await waitForBrowserCommand(receipt.commandId, 10 * 60_000)
+}
 
 export const authorizationChecks = reactive<Record<string, { checking: boolean; result: BrowserAuthorizationResult | null }>>({})
 
@@ -133,8 +167,8 @@ export async function readResumeTextViaAgent(accountId: string, hhResumeId: stri
   const result = command.resumes?.find(resume => resume.hhResumeId === hhResumeId)
   if (command.authorization?.status !== 'AUTHORIZED' || !result?.plainText?.trim()) {
     throw new Error(command.authorization?.status !== 'AUTHORIZED'
-      ? 'Вход в HH не подтверждён. Войдите в аккаунт и повторите добавление.'
-      : 'Агент не вернул текст выбранного резюме. Обновите Browser Agent и повторите добавление.')
+      ? 'Вход в HH не подтверждён. Войдите в аккаунт и повторите загрузку текста.'
+      : 'Агент не вернул текст выбранного резюме. Обновите Browser Agent и повторите загрузку текста.')
   }
   return result.plainText
 }
@@ -153,19 +187,62 @@ export async function ensureBrowserProfile(accountId: string): Promise<BrowserPr
   }
 }
 
+const browserPreparation = new BrowserPreparation()
+
+/** Preparation belongs to the requested action's account, not the current UI selection. */
+export async function ensureBrowserForAccount(accountId: string): Promise<void> {
+  await browserPreparation.ensure(accountId, {
+    status: loadBrowserAgentStatus, profile: ensureBrowserProfile, open: openBrowserViaAgent,
+    waitReady: async profileId => {
+      const deadline = Date.now() + 15_000
+      while (Date.now() < deadline) {
+        const current = await loadBrowserAgentStatus()
+        if (current.status === 'READY' && current.browserOpen && current.activeProfileId === profileId) return
+        if (current.status === 'OFFLINE') break
+        await delay(500)
+      }
+      throw new Error('Браузер открыт, но агент ещё не подтвердил готовность. Повторите действие после завершения запуска.')
+    },
+  })
+}
+
+export async function ensureBrowserForResume(resumeId: string): Promise<void> {
+  const resume = isMockMode ? getResumesMock(getMockScenario()).items.find(item => item.id === resumeId)
+    : await apiRequest<ResumeProfile>(`/api/v1/resumes/${encodeURIComponent(resumeId)}`)
+  if (!resume) throw new Error('Резюме не найдено.')
+  await ensureBrowserForAccount(resume.accountId)
+}
+
+export async function focusVacancyViaAgent(accountId: string, hhVacancyId: string): Promise<BrowserAgentCommandResponse> {
+  if (isMockMode) {
+    const page = getBrowserPageMock(getMockScenario())
+    if (page.profile?.accountId !== accountId || page.profile.processStatus !== 'RUNNING') throw new Error('Вкладка вакансии недоступна: браузер закрыт.')
+    const now = new Date().toISOString()
+    return { id: `mock-focus-${Date.now()}`, type: 'FOCUS_VACANCY', status: 'SUCCEEDED', agentId: 'mock-browser-agent',
+      createdAt: now, startedAt: now, completedAt: now, errorMessage: null }
+  }
+  const receipt = await apiRequest<BrowserCommandReceiptResponse>('/api/v1/browser/focus-vacancy', {
+    method: 'POST', body: JSON.stringify({ accountId, hhVacancyId }),
+  })
+  return waitForBrowserCommand(receipt.commandId, 10 * 60_000)
+}
+
 export async function openUrlViaAgent(accountId: string, url: string): Promise<BrowserAgentCommandResponse> {
   if (isMockMode) {
     const page = getBrowserPageMock(getMockScenario())
-    if (page.profile?.processStatus !== 'RUNNING') throw new Error('Сначала запустите браузер')
+    if (page.agent.status !== 'READY') throw new Error('Browser Agent занят или недоступен.')
+    await ensureBrowserProfile(accountId)
+    setBrowserRunningMock(getMockScenario(), true)
     const now = new Date().toISOString()
     return { id: `mock-open-url-${Date.now()}`, type: 'OPEN_URL', status: 'SUCCEEDED', agentId: 'mock-browser-agent', createdAt: now, startedAt: now, completedAt: now, errorMessage: null }
   }
 
+  await ensureBrowserProfile(accountId)
   const receipt = await apiRequest<BrowserCommandReceiptResponse>('/api/v1/browser/open-url', {
     method: 'POST',
     body: JSON.stringify({ accountId, url }),
   })
-  return waitForBrowserCommand(receipt.commandId)
+  return waitForBrowserCommand(receipt.commandId, 120_000)
 }
 
 export async function waitForBrowserCommand(commandId: string, timeoutMs = COMMAND_TIMEOUT_MS): Promise<BrowserAgentCommandResponse> {

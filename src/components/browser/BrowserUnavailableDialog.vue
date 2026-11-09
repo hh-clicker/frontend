@@ -28,7 +28,7 @@ function selectUrl(): void { urlInput.value?.select() }
 <template>
   <AppDialog
     v-if="hhBrowserNavigationState.unavailableUrl"
-    title="Сначала запустите браузер"
+    title="Открыть ссылку на HH"
     description="Ссылка должна открыться в постоянном профиле HH Clicker."
     tone="warning"
     @close="closeBrowserReminder"
@@ -43,7 +43,7 @@ function selectUrl(): void { urlInput.value?.select() }
           <IconCopy v-else :size="18" />
         </AppButton>
       </div>
-      <small>Запустите Chrome на странице браузера и повторите переход.</small>
+      <small>{{ hhBrowserNavigationState.message ?? 'Проверьте Browser Agent и повторите переход.' }}</small>
     </div>
     <template #footer>
       <AppButton @click="closeBrowserReminder">Закрыть</AppButton>

@@ -165,8 +165,8 @@
 
 .search-scan-state > small { display: block; margin-top: var(--space-3); color: var(--color-muted); font-size: 11px; }
 .search-scan-error { margin: 20px; }
-.search-scan-error__content { display: flex; align-items: flex-start; gap: var(--space-3); }
-.search-scan-error__content > div { display: grid; gap: 3px; }
+.search-detail-card > .runtime-selector-notices.search-selector-notices { margin: var(--space-5); }
+.search-scan-error__content { display: grid; gap: 3px; }
 .search-scan-error__content span,
 .search-scan-error__content small { color: var(--color-text-secondary); }
 .search-scan-error__content small { font-size: 11px; }
